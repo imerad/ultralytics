@@ -1742,7 +1742,7 @@ class Albumentations:
         - Spatial transforms are handled differently and require special processing for bounding boxes.
     """
 
-    def __init__(self, p=1.0):
+    def __init__(self, p=1.0, imsize=320):
         """
         Initialize the Albumentations transform object for YOLO bbox formatted parameters.
 
@@ -1833,6 +1833,7 @@ class Albumentations:
                 A.ToGray(p=0.01),
                 A.CLAHE(p=0.01),
                 A.BBoxSafeRandomCrop(erosion_rate=0.8, p=0.65),
+                A.PadIfNeeded(min_height=imsize, min_width=imsize, p=1),
                 A.RandomBrightnessContrast(p=0.0),
                 A.RandomGamma(p=0.0),
                 A.ImageCompression(quality_lower=75, p=0.0),
@@ -2308,7 +2309,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         [
             pre_transform,
             MixUp(dataset, pre_transform=pre_transform, p=hyp.mixup),
-            Albumentations(p=1.0),
+            Albumentations(p=1.0, imsize=imgsz),
             RandomHSV(hgain=hyp.hsv_h, sgain=hyp.hsv_s, vgain=hyp.hsv_v),
             RandomFlip(direction="vertical", p=hyp.flipud),
             RandomFlip(direction="horizontal", p=hyp.fliplr, flip_idx=flip_idx),
