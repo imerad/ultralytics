@@ -1955,6 +1955,7 @@ class Albumentations:
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
                 A.CLAHE(p=0.01),
+                A.BBoxSafeRandomCrop(erosion_rate=0.8, p=0.65),
                 A.RandomBrightnessContrast(p=0.0),
                 A.RandomGamma(p=0.0),
                 A.ImageCompression(quality_range=(75, 100), p=0.0),
