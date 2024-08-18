@@ -1951,6 +1951,8 @@ class Albumentations:
 
             # Transforms
             T = [
+                A.Equalize(p=0.3),
+                A.RandomToneCurve(p=0.5),
                 A.Blur(p=0.01),
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
