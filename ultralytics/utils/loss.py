@@ -251,6 +251,11 @@ class v8DetectionLoss:
 
         target_scores_sum = max(target_scores.sum(), 1)
 
+        # no need for this, the job is done in the assigner
+        # target_labels = target_labels.unsqueeze(-1).expand(-1, -1, self.nc)  # self.nc: class num
+        # one_hot = torch.zeros(target_labels.size(), device=self.device)
+        # one_hot.scatter_(-1, target_labels, 1)
+
         # Cls loss
         loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
         # loss[1] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # BCE
