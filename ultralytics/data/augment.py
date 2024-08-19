@@ -948,6 +948,113 @@ class MixUp(BaseMixTransform):
         return labels
 
 
+class RandomCropPreserveBoxes:
+    def __init__(self, p=0.25, min_cropped_portion=0.7, margin=20):
+        self.p = p # cropping probability
+        self.min_cropped_portion = min_cropped_portion
+        self.margin = margin
+
+    def crop(self, image, bboxes):
+        H, W, _ = image.shape
+
+        min_box_x, min_box_y = W, H
+        max_box_x, max_box_y = 0, 0
+        for k in range(len(bboxes)):
+            # cx, cy, wp, hp = target["boxes"][k]
+            # w, h = int(wp*W), int(hp*H)
+            # xmin, ymin = int(W*(cx-wp/2)), int(H*(cy-hp/2))
+            #print(f"bbox : {xmin}, {ymin}, {w}, {h}")
+            xyxy_boxes.append([xmin, ymin, xmin+w, ymin+h])
+            min_box_x = min(min_box_x, bboxes[k, 0] - self.margin)
+            min_box_y = min(min_box_y, bboxes[k, 1] - self.margin)
+            max_box_x = max(max_box_x, bboxes[k, 2] + self.margin)
+            max_box_y = max(max_box_y, bboxes[k, 3] + self.margin)
+
+        cropped_H, cropped_W = random.randint(int(min_crop_portion * H), H), random.randint(int(min_crop_portion * W), W)
+        cropped_H = min(max(cropped_H, max_box_y - min_box_y + 2 * self.margin), H)
+        cropped_W = min(max(cropped_W, max_box_x - min_box_x + 2 * self.margin), W)
+
+        if H - max_box_y < min_box_y:
+            crop_ymax = random.randint(max(cropped_H, min(H, max_box_y+self.margin)), H)
+            crop_ymin = max(0, crop_ymax - cropped_H)
+        else:
+            crop_ymin = random.randint(0, min(max(0, min_box_y-self.margin), H - cropped_H))
+            crop_ymax = crop_ymin + cropped_H
+
+        if W - max_box_x < min_box_x:
+            crop_xmax = random.randint(max(cropped_W, min(W, max_box_x+self.margin)), W)
+            crop_xmin = crop_xmax - cropped_W
+        else:
+            crop_xmin = random.randint(0, min(max(0, min_box_x-self.margin), W - cropped_W))
+            crop_xmax = crop_xmin + cropped_W
+
+        cropped_image = image[crop_ymin:crop_ymax, crop_xmin:crop_xmax, :] # F.crop(image, *region)
+
+        bboxes[:, 0] -= crop_xmin
+        bboxes[:, 1] -= crop_ymin
+        bboxes[:, 2] -= crop_xmin
+        bboxes[:, 3] -= crop_ymin
+
+        # new_boxes = []
+        # areas = []
+        # for k in range(len(bboxes)):
+        #     xmin, ymin, xmax, ymax = bboxes[k]
+        #     areas.append((xmax-xmin)*(ymax-ymin))
+        #     cx, cy = (xmin+xmax-2*crop_xmin)/(2*cropped_W), (ymin+ymax-2*crop_ymin)/(2*cropped_H)
+        #     wp, hp = (xmax-xmin)/cropped_W, (ymax-ymin)/cropped_H
+        #     new_boxes.append([cx, cy, wp, hp])
+
+        # target["boxes"] = torch.as_tensor(new_boxes)
+        # target["area"] = torch.as_tensor(areas)
+
+        return cropped_image, bboxes
+
+
+
+    def __call__(self, labels):
+        # if self.pre_transform and "mosaic_border" not in labels:
+        #     labels = self.pre_transform(labels)
+
+        img = labels["img"]
+        cls = labels["cls"]
+        instances = labels.pop("instances")
+        # Make sure the coord formats are right
+        instances.convert_bbox(format="xyxy")
+        instances.denormalize(*img.shape[:2][::-1])
+
+        # border = labels.pop("mosaic_border", self.border)
+        # self.size = img.shape[1] + border[1] * 2, img.shape[0] + border[0] * 2  # w, h
+        # M is affine matrix
+        # Scale for func:`box_candidates`
+        # img, M, scale = self.affine_transform(img, border)
+
+        cropped_img, bboxes = self.crop(img, instances.bboxes)
+
+        segments = instances.segments
+        keypoints = instances.keypoints
+        # Update bboxes if there are segments.
+        # if len(segments):
+        #     bboxes, segments = self.apply_segments(segments, M)
+
+        # if keypoints is not None:
+        #     keypoints = self.apply_keypoints(keypoints, M)
+        new_instances = Instances(bboxes, segments, keypoints, bbox_format="xyxy", normalized=False)
+        # Clip
+        # new_instances.clip(*self.size)
+
+        # Filter instances
+        # instances.scale(scale_w=scale, scale_h=scale, bbox_only=True)
+        # # Make the bboxes have the same scale with new_bboxes
+        # i = self.box_candidates(
+        #     box1=instances.bboxes.T, box2=new_instances.bboxes.T, area_thr=0.01 if len(segments) else 0.10
+        # )
+        labels["instances"] = new_instances # [i]
+        labels["cls"] = cls # [i]
+        labels["img"] = img
+        labels["resized_shape"] = img.shape[:2]
+        return labels
+
+
 class RandomPerspective:
     """
     Implements random perspective and affine transformations on images and corresponding annotations.
@@ -1847,8 +1954,9 @@ class Albumentations:
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
                 A.CLAHE(p=0.01),
-                A.BBoxSafeRandomCrop(erosion_rate=0.8, p=0.65),
-                A.PadIfNeeded(min_height=imsize, min_width=imsize, p=1, border_mode=cv2.BORDER_CONSTANT, value=0),
+                #A.RandomSizedBBoxSafeCrop(width=imsize, height=imsize, erosion_rate=0.2),
+                #A.BBoxSafeRandomCrop(erosion_rate=0.8, p=0.65),
+                #A.PadIfNeeded(min_height=imsize, min_width=imsize, p=1, border_mode=cv2.BORDER_CONSTANT, value=0),
                 A.RandomBrightnessContrast(p=0.0),
                 A.RandomGamma(p=0.0),
                 A.ImageCompression(quality_lower=75, p=0.0),
@@ -2297,7 +2405,9 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> transforms = v8_transforms(dataset, imgsz=640, hyp=hyp)
         >>> augmented_data = transforms(dataset[0])
     """
+
     mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic)
+    randCropPresvBoxes = RandomCropPreserveBoxes(p=0.5, min_cropped_portion=0.5)
     affine = RandomPerspective(
         degrees=hyp.degrees,
         translate=hyp.translate,
@@ -2307,7 +2417,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         pre_transform=None if stretch else LetterBox(new_shape=(imgsz, imgsz)),
     )
 
-    pre_transform = Compose([mosaic, affine])
+    pre_transform = Compose([mosaic, randCropPresvBoxes, affine])
     if hyp.copy_paste_mode == "flip":
         pre_transform.insert(1, CopyPaste(p=hyp.copy_paste, mode=hyp.copy_paste_mode))
     else:
