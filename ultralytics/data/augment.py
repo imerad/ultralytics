@@ -953,21 +953,21 @@ class RandomCropPreserveBoxes:
             max_box_y = max(max_box_y, bboxes[k, 3] + self.margin)
 
         cropped_H, cropped_W = random.randint(int(self.min_crop_portion * H), H), random.randint(int(self.min_crop_portion * W), W)
-        cropped_H = min(max(cropped_H, max_box_y - min_box_y + 2 * self.margin), H)
-        cropped_W = min(max(cropped_W, max_box_x - min_box_x + 2 * self.margin), W)
+        cropped_H = int(min(max(cropped_H, max_box_y - min_box_y + 2 * self.margin), H))
+        cropped_W = int(min(max(cropped_W, max_box_x - min_box_x + 2 * self.margin), W))
 
         if H - max_box_y < min_box_y:
-            crop_ymax = random.randint(max(cropped_H, min(H, max_box_y+self.margin)), H)
-            crop_ymin = max(0, crop_ymax - cropped_H)
+            crop_ymax = random.randint(int(max(cropped_H, min(H, max_box_y+self.margin))), H)
+            crop_ymin = int(max(0, crop_ymax - cropped_H))
         else:
-            crop_ymin = random.randint(0, min(max(0, min_box_y-self.margin), H - cropped_H))
+            crop_ymin = random.randint(0, int(min(max(0, min_box_y-self.margin), H - cropped_H)))
             crop_ymax = crop_ymin + cropped_H
 
         if W - max_box_x < min_box_x:
-            crop_xmax = random.randint(max(cropped_W, min(W, max_box_x+self.margin)), W)
+            crop_xmax = random.randint(int(max(cropped_W, min(W, max_box_x+self.margin))), W)
             crop_xmin = crop_xmax - cropped_W
         else:
-            crop_xmin = random.randint(0, min(max(0, min_box_x-self.margin), W - cropped_W))
+            crop_xmin = random.randint(0, int(min(max(0, min_box_x-self.margin), W - cropped_W)))
             crop_xmax = crop_xmin + cropped_W
 
         cropped_image = image[crop_ymin:crop_ymax, crop_xmin:crop_xmax, :] # F.crop(image, *region)
