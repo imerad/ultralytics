@@ -952,7 +952,7 @@ class RandomCropPreserveBoxes:
             max_box_x = max(max_box_x, bboxes[k, 2] + self.margin)
             max_box_y = max(max_box_y, bboxes[k, 3] + self.margin)
 
-        cropped_H, cropped_W = random.randint(int(min_crop_portion * H), H), random.randint(int(min_crop_portion * W), W)
+        cropped_H, cropped_W = random.randint(int(self.min_crop_portion * H), H), random.randint(int(self.min_crop_portion * W), W)
         cropped_H = min(max(cropped_H, max_box_y - min_box_y + 2 * self.margin), H)
         cropped_W = min(max(cropped_W, max_box_x - min_box_x + 2 * self.margin), W)
 
