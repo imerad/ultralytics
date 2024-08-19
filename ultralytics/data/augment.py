@@ -930,121 +930,110 @@ class MixUp(BaseMixTransform):
         return labels
 
 
-class CutMix(BaseMixTransform):
-    """
-    Applies CutMix augmentation to image datasets as described in the paper https://arxiv.org/abs/1905.04899.
+class RandomCropPreserveBoxes:
+    def __init__(self, p=0.25, min_cropped_portion=0.7, margin=20):
+        self.p = p # cropping probability
+        self.min_cropped_portion = min_cropped_portion
+        self.margin = margin
 
-    CutMix combines two images by replacing a random rectangular region of one image with the corresponding region from another image,
-    and adjusts the labels proportionally to the area of the mixed region.
+    def crop(self, image, bboxes):
+        H, W, _ = image.shape
 
-    Attributes:
-        dataset (Any): The dataset to which CutMix augmentation will be applied.
-        pre_transform (Callable | None): Optional transform to apply before CutMix.
-        p (float): Probability of applying CutMix augmentation.
-        beta (float): Beta distribution parameter for sampling the mixing ratio (default=1.0).
-        num_areas (int): Number of areas to try to cut and mix (default=3).
+        min_box_x, min_box_y = W, H
+        max_box_x, max_box_y = 0, 0
+        for k in range(len(bboxes)):
+            # cx, cy, wp, hp = target["boxes"][k]
+            # w, h = int(wp*W), int(hp*H)
+            # xmin, ymin = int(W*(cx-wp/2)), int(H*(cy-hp/2))
+            #print(f"bbox : {xmin}, {ymin}, {w}, {h}")
+            xyxy_boxes.append([xmin, ymin, xmin+w, ymin+h])
+            min_box_x = min(min_box_x, bboxes[k, 0] - self.margin)
+            min_box_y = min(min_box_y, bboxes[k, 1] - self.margin)
+            max_box_x = max(max_box_x, bboxes[k, 2] + self.margin)
+            max_box_y = max(max_box_y, bboxes[k, 3] + self.margin)
 
-    Methods:
-        _mix_transform: Applies CutMix augmentation to the input labels.
-        _rand_bbox: Generates random bounding box coordinates for the cut region.
+        cropped_H, cropped_W = random.randint(int(min_crop_portion * H), H), random.randint(int(min_crop_portion * W), W)
+        cropped_H = min(max(cropped_H, max_box_y - min_box_y + 2 * self.margin), H)
+        cropped_W = min(max(cropped_W, max_box_x - min_box_x + 2 * self.margin), W)
 
-    Examples:
-        >>> from ultralytics.data.augment import CutMix
-        >>> dataset = YourDataset(...)  # Your image dataset
-        >>> cutmix = CutMix(dataset, p=0.5)
-        >>> augmented_labels = cutmix(original_labels)
-    """
+        if H - max_box_y < min_box_y:
+            crop_ymax = random.randint(max(cropped_H, min(H, max_box_y+self.margin)), H)
+            crop_ymin = max(0, crop_ymax - cropped_H)
+        else:
+            crop_ymin = random.randint(0, min(max(0, min_box_y-self.margin), H - cropped_H))
+            crop_ymax = crop_ymin + cropped_H
 
-    def __init__(self, dataset, pre_transform=None, p=0.0, beta=1.0, num_areas=3) -> None:
-        """
-        Initializes the CutMix augmentation object.
+        if W - max_box_x < min_box_x:
+            crop_xmax = random.randint(max(cropped_W, min(W, max_box_x+self.margin)), W)
+            crop_xmin = crop_xmax - cropped_W
+        else:
+            crop_xmin = random.randint(0, min(max(0, min_box_x-self.margin), W - cropped_W))
+            crop_xmax = crop_xmin + cropped_W
 
-        Args:
-            dataset (Any): The dataset to which CutMix augmentation will be applied.
-            pre_transform (Callable | None): Optional transform to apply before CutMix.
-            p (float): Probability of applying CutMix augmentation.
-            beta (float): Beta distribution parameter for sampling the mixing ratio (default=1.0).
-            num_areas (int): Number of areas to try to cut and mix (default=3).
-        """
-        super().__init__(dataset=dataset, pre_transform=pre_transform, p=p)
-        self.beta = beta
-        self.num_areas = num_areas
+        cropped_image = image[crop_ymin:crop_ymax, crop_xmin:crop_xmax, :] # F.crop(image, *region)
 
-    def _rand_bbox(self, width, height):
-        """
-        Generates random bounding box coordinates for the cut region.
+        bboxes[:, 0] -= crop_xmin
+        bboxes[:, 1] -= crop_ymin
+        bboxes[:, 2] -= crop_xmin
+        bboxes[:, 3] -= crop_ymin
 
-        Args:
-            width (int): Width of the image.
-            height (int): Height of the image.
+        # new_boxes = []
+        # areas = []
+        # for k in range(len(bboxes)):
+        #     xmin, ymin, xmax, ymax = bboxes[k]
+        #     areas.append((xmax-xmin)*(ymax-ymin))
+        #     cx, cy = (xmin+xmax-2*crop_xmin)/(2*cropped_W), (ymin+ymax-2*crop_ymin)/(2*cropped_H)
+        #     wp, hp = (xmax-xmin)/cropped_W, (ymax-ymin)/cropped_H
+        #     new_boxes.append([cx, cy, wp, hp])
 
-        Returns:
-            (tuple): (x1, y1, x2, y2) coordinates of the bounding box.
-        """
-        # Sample mixing ratio from Beta distribution
-        lam = np.random.beta(self.beta, self.beta)
+        # target["boxes"] = torch.as_tensor(new_boxes)
+        # target["area"] = torch.as_tensor(areas)
 
-        cut_ratio = np.sqrt(1.0 - lam)
-        cut_w = int(width * cut_ratio)
-        cut_h = int(height * cut_ratio)
+        return cropped_image, bboxes
 
-        # Random center
-        cx = np.random.randint(width)
-        cy = np.random.randint(height)
 
-        # Bounding box coordinates
-        x1 = np.clip(cx - cut_w // 2, 0, width)
-        y1 = np.clip(cy - cut_h // 2, 0, height)
-        x2 = np.clip(cx + cut_w // 2, 0, width)
-        y2 = np.clip(cy + cut_h // 2, 0, height)
 
-        return x1, y1, x2, y2
+    def __call__(self, labels):
+        # if self.pre_transform and "mosaic_border" not in labels:
+        #     labels = self.pre_transform(labels)
 
-    def _mix_transform(self, labels):
-        """
-        Applies CutMix augmentation to the input labels.
+        img = labels["img"]
+        cls = labels["cls"]
+        instances = labels.pop("instances")
+        # Make sure the coord formats are right
+        instances.convert_bbox(format="xyxy")
+        instances.denormalize(*img.shape[:2][::-1])
 
-        Args:
-            labels (dict): A dictionary containing the original image and label information.
+        # border = labels.pop("mosaic_border", self.border)
+        # self.size = img.shape[1] + border[1] * 2, img.shape[0] + border[0] * 2  # w, h
+        # M is affine matrix
+        # Scale for func:`box_candidates`
+        # img, M, scale = self.affine_transform(img, border)
 
-        Returns:
-            (dict): A dictionary containing the mixed image and adjusted labels.
+        cropped_img, bboxes = self.crop(img, instances.bboxes)
 
-        Examples:
-            >>> cutter = CutMix(dataset)
-            >>> mixed_labels = cutter._mix_transform(labels)
-        """
-        # Get a random second image
-        h, w = labels["img"].shape[:2]
+        segments = instances.segments
+        keypoints = instances.keypoints
+        # Update bboxes if there are segments.
+        # if len(segments):
+        #     bboxes, segments = self.apply_segments(segments, M)
 
-        cut_areas = np.asarray([self._rand_bbox(w, h) for _ in range(self.num_areas)], dtype=np.float32)
-        ioa1 = bbox_ioa(cut_areas, labels["instances"].bboxes)  # (self.num_areas, num_boxes)
-        idx = np.nonzero(ioa1.sum(axis=1) <= 0)[0]
-        if len(idx) == 0:
-            return labels
+        # if keypoints is not None:
+        #     keypoints = self.apply_keypoints(keypoints, M)
+        new_instances = Instances(bboxes, segments, keypoints, bbox_format="xyxy", normalized=False)
+        # Clip
+        # new_instances.clip(*self.size)
 
-        labels2 = labels.pop("mix_labels")[0]
-        area = cut_areas[np.random.choice(idx)]  # randomle select one
-        ioa2 = bbox_ioa(area[None], labels2["instances"].bboxes).squeeze(0)
-        indexes2 = np.nonzero(ioa2 >= (0.01 if len(labels["instances"].segments) else 0.1))[0]
-        if len(indexes2) == 0:
-            return labels
-
-        instances2 = labels2["instances"][indexes2]
-        instances2.convert_bbox("xyxy")
-        instances2.denormalize(w, h)
-
-        # Apply CutMix
-        x1, y1, x2, y2 = area.astype(np.int32)
-        labels["img"][y1:y2, x1:x2] = labels2["img"][y1:y2, x1:x2]
-
-        # Restrain instances2 to the random bounding border
-        instances2.add_padding(-x1, -y1)
-        instances2.clip(x2 - x1, y2 - y1)
-        instances2.add_padding(x1, y1)
-
-        labels["cls"] = np.concatenate([labels["cls"], labels2["cls"][indexes2]], axis=0)
-        labels["instances"] = Instances.concatenate([labels["instances"], instances2], axis=0)
+        # Filter instances
+        # instances.scale(scale_w=scale, scale_h=scale, bbox_only=True)
+        # # Make the bboxes have the same scale with new_bboxes
+        # i = self.box_candidates(
+        #     box1=instances.bboxes.T, box2=new_instances.bboxes.T, area_thr=0.01 if len(segments) else 0.10
+        # )
+        labels["instances"] = new_instances # [i]
+        labels["cls"] = cls # [i]
+        labels["img"] = img
+        labels["resized_shape"] = img.shape[:2]
         return labels
 
 
@@ -1957,8 +1946,9 @@ class Albumentations:
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
                 A.CLAHE(p=0.01),
-                A.BBoxSafeRandomCrop(erosion_rate=0.8, p=0.65),
-                A.PadIfNeeded(min_height=imsize, min_width=imsize, p=1, border_mode=cv2.BORDER_CONSTANT, value=0),
+                #A.RandomSizedBBoxSafeCrop(width=imsize, height=imsize, erosion_rate=0.2),
+                #A.BBoxSafeRandomCrop(erosion_rate=0.8, p=0.65),
+                #A.PadIfNeeded(min_height=imsize, min_width=imsize, p=1, border_mode=cv2.BORDER_CONSTANT, value=0),
                 A.RandomBrightnessContrast(p=0.0),
                 A.RandomGamma(p=0.0),
                 A.ImageCompression(quality_range=(75, 100), p=0.0),
@@ -2508,7 +2498,9 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> transforms = v8_transforms(dataset, imgsz=640, hyp=hyp)
         >>> augmented_data = transforms(dataset[0])
     """
+
     mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic)
+    randCropPresvBoxes = RandomCropPreserveBoxes(p=0.5, min_cropped_portion=0.5)
     affine = RandomPerspective(
         degrees=hyp.degrees,
         translate=hyp.translate,
@@ -2518,7 +2510,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         pre_transform=None if stretch else LetterBox(new_shape=(imgsz, imgsz)),
     )
 
-    pre_transform = Compose([mosaic, affine])
+    pre_transform = Compose([mosaic, randCropPresvBoxes, affine])
     if hyp.copy_paste_mode == "flip":
         pre_transform.insert(1, CopyPaste(p=hyp.copy_paste, mode=hyp.copy_paste_mode))
     else:
