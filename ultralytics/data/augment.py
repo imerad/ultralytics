@@ -947,9 +947,9 @@ class MixUp(BaseMixTransform):
 
 
 class RandomCropPreserveBoxes:
-    def __init__(self, p=0.25, min_cropped_portion=0.7, margin=20):
+    def __init__(self, p=0.25, min_crop_portion=0.7, margin=20):
         self.p = p # cropping probability
-        self.min_cropped_portion = min_cropped_portion
+        self.min_crop_portion = min_crop_portion
         self.margin = margin
 
     def crop(self, image, bboxes):
@@ -2396,7 +2396,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         [
             Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic),
             CopyPaste(p=hyp.copy_paste),
-            RandomCropPreserveBoxes(p=0.5, min_cropped_portion=0.5),
+            RandomCropPreserveBoxes(p=0.5, min_crop_portion=0.5),
             RandomPerspective(
                 degrees=hyp.degrees,
                 translate=hyp.translate,
