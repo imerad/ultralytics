@@ -2397,7 +2397,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> transforms = v8_transforms(dataset, imgsz=640, hyp=hyp)
         >>> augmented_data = transforms(dataset[0])
     """
-    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.6, min_crop_portion=0.5)
+    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.25, min_crop_portion=0.5)
     pre_transform = Compose(
         [
             Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=cropPreserveBoxes),
