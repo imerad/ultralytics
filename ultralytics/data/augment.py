@@ -946,7 +946,7 @@ class RandomCropPreserveBoxes:
             # w, h = int(wp*W), int(hp*H)
             # xmin, ymin = int(W*(cx-wp/2)), int(H*(cy-hp/2))
             #print(f"bbox : {xmin}, {ymin}, {w}, {h}")
-            xyxy_boxes.append([xmin, ymin, xmin+w, ymin+h])
+            #xyxy_boxes.append([xmin, ymin, xmin+w, ymin+h])
             min_box_x = min(min_box_x, bboxes[k, 0] - self.margin)
             min_box_y = min(min_box_y, bboxes[k, 1] - self.margin)
             max_box_x = max(max_box_x, bboxes[k, 2] + self.margin)
