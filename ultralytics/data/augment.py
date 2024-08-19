@@ -518,7 +518,7 @@ class Mosaic(BaseMixTransform):
         >>> augmented_labels = mosaic_aug(original_labels)
     """
 
-    def __init__(self, dataset, imgsz=640, p=1.0, n=4):
+    def __init__(self, dataset, imgsz=640, p=1.0, n=4, pre_transform=None):
         """
         Initializes the Mosaic augmentation object.
 
@@ -538,7 +538,7 @@ class Mosaic(BaseMixTransform):
         """
         assert 0 <= p <= 1.0, f"The probability should be in range [0, 1], but got {p}."
         assert n in {4, 9}, "grid must be equal to 4 or 9."
-        super().__init__(dataset=dataset, p=p)
+        super().__init__(dataset=dataset, p=p, pre_transform=pre_transform)
         self.imgsz = imgsz
         self.border = (-imgsz // 2, -imgsz // 2)  # width, height
         self.n = n
@@ -946,6 +946,13 @@ class MixUp(BaseMixTransform):
         return labels
 
 
+class Identity:
+    def __init__(self):
+        pass
+
+    def __call__(self, labels):
+        return labels
+
 class RandomCropPreserveBoxes:
     def __init__(self, p=0.25, min_crop_portion=0.7, margin=20):
         self.p = p # cropping probability
@@ -1007,8 +1014,6 @@ class RandomCropPreserveBoxes:
 
         return cropped_image, bboxes
 
-
-
     def __call__(self, labels):
         # if self.pre_transform and "mosaic_border" not in labels:
         #     labels = self.pre_transform(labels)
@@ -1048,8 +1053,8 @@ class RandomCropPreserveBoxes:
         # )
         labels["instances"] = new_instances # [i]
         labels["cls"] = cls # [i]
-        labels["img"] = img
-        labels["resized_shape"] = img.shape[:2]
+        labels["img"] = cropped_img
+        labels["resized_shape"] = cropped_img.shape[:2]
         return labels
 
 
@@ -2392,11 +2397,12 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> transforms = v8_transforms(dataset, imgsz=640, hyp=hyp)
         >>> augmented_data = transforms(dataset[0])
     """
+    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.6, min_crop_portion=0.5)
     pre_transform = Compose(
         [
-            Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic),
+            Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=cropPreserveBoxes),
             CopyPaste(p=hyp.copy_paste),
-            RandomCropPreserveBoxes(p=0.5, min_crop_portion=0.5),
+            cropPreserveBoxes if hyp.mosaic==0 else Identity(),
             RandomPerspective(
                 degrees=hyp.degrees,
                 translate=hyp.translate,
