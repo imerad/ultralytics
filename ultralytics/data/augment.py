@@ -2504,7 +2504,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> augmented_data = transforms(dataset[0])
     """
 
-    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.6, min_crop_portion=0.5)
+    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.25, min_crop_portion=0.5)
     mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=cropPreserveBoxes)
     affine = RandomPerspective(
         degrees=hyp.degrees,
