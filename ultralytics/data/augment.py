@@ -939,6 +939,7 @@ class Identity:
 
 class RandomCropPreserveBoxes:
     def __init__(self, p=0.25, min_crop_portion=0.7, margin=20):
+        print("initializing RandomCropPreserveBoxes")
         self.p = p # cropping probability
         self.min_crop_portion = min_crop_portion
         self.margin = margin
@@ -1001,6 +1002,7 @@ class RandomCropPreserveBoxes:
     def __call__(self, labels):
         # if self.pre_transform and "mosaic_border" not in labels:
         #     labels = self.pre_transform(labels)
+        print("calling RandomCropPreserveBoxes")
 
         img = labels["img"]
         cls = labels["cls"]
@@ -2503,7 +2505,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> transforms = v8_transforms(dataset, imgsz=640, hyp=hyp)
         >>> augmented_data = transforms(dataset[0])
     """
-
+    print("running v8_transforms with cropPreserveBoxes")
     cropPreserveBoxes = RandomCropPreserveBoxes(p=0.2, min_crop_portion=0.75)
     mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=cropPreserveBoxes)
     affine = RandomPerspective(
