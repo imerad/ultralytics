@@ -939,7 +939,7 @@ class Identity:
 
 class RandomCropPreserveBoxes:
     def __init__(self, p=0.25, min_crop_portion=0.7, margin=20):
-        print("initializing RandomCropPreserveBoxes")
+        #print("initializing RandomCropPreserveBoxes")
         self.p = p # cropping probability
         self.min_crop_portion = min_crop_portion
         self.margin = margin
@@ -1002,7 +1002,6 @@ class RandomCropPreserveBoxes:
     def __call__(self, labels):
         # if self.pre_transform and "mosaic_border" not in labels:
         #     labels = self.pre_transform(labels)
-        print("calling RandomCropPreserveBoxes")
 
         img = labels["img"]
         cls = labels["cls"]

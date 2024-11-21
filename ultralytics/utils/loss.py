@@ -36,7 +36,7 @@ class VarifocalLoss(nn.Module):
         with autocast(enabled=False):
             loss = (
                 (F.binary_cross_entropy_with_logits(pred_score.float(), gt_score.float(), reduction="none") * weight)
-                #.mean(1)
+                .mean(1)
                 .sum()
             )
         return loss
@@ -172,8 +172,6 @@ class v8DetectionLoss:
 
         m = model.model[-1]  # Detect() module
         self.bce = nn.BCEWithLogitsLoss(reduction="none")
-        # self.focal_loss = FocalLoss()
-        # self.varifocal_loss = VarifocalLoss()
         self.hyp = h
         self.stride = m.stride  # model strides
         self.nc = m.nc  # number of classes
@@ -240,7 +238,8 @@ class v8DetectionLoss:
         # dfl_conf = pred_distri.view(batch_size, -1, 4, self.reg_max).detach().softmax(-1)
         # dfl_conf = (dfl_conf.amax(-1).mean(-1) + dfl_conf.amax(-1).amin(-1)) / 2
 
-        target_labels, target_bboxes, target_scores, fg_mask, _ = self.assigner(
+        _, target_bboxes, target_scores, fg_mask, _ = self.assigner(
+            # pred_scores.detach().sigmoid() * 0.8 + dfl_conf.unsqueeze(-1) * 0.2,
             pred_scores.detach().sigmoid(),
             (pred_bboxes.detach() * stride_tensor).type(gt_bboxes.dtype),
             anchor_points * stride_tensor,
@@ -251,15 +250,9 @@ class v8DetectionLoss:
 
         target_scores_sum = max(target_scores.sum(), 1)
 
-        # no need for this, the job is done in the assigner
-        # target_labels = target_labels.unsqueeze(-1).expand(-1, -1, self.nc)  # self.nc: class num
-        # one_hot = torch.zeros(target_labels.size(), device=self.device)
-        # one_hot.scatter_(-1, target_labels, 1)
-
         # Cls loss
         # loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
         loss[1] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # BCE
-        # loss[1] = self.focal_loss(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # Focal loss
 
         # Bbox loss
         if fg_mask.sum():

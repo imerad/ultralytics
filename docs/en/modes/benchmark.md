@@ -14,10 +14,24 @@ keywords: model benchmarking, YOLO11, Ultralytics, performance evaluation, expor
 
     You may need to refresh the page to view the graphs correctly due to potential cookie issues.
 
-<script async src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script defer src="../../javascript/benchmark.js"></script>
 
-<canvas id="modelComparisonChart" width="1024" height="400"></canvas>
+<div style="display: flex; align-items: flex-start;">
+  <div style="margin-right: 20px;">
+    <label><input type="checkbox" name="algorithm" value="YOLO11" checked><span>YOLO11</span></label><br>
+<label><input type="checkbox" name="algorithm" value="YOLOv10" checked><span>YOLOv10</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="YOLOv9" checked><span>YOLOv9</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="YOLOv8" checked><span>YOLOv8</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="YOLOv7" checked><span>YOLOv7</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="YOLOv6-3.0" checked><span>YOLOv6-3.0</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="YOLOv5" checked><span>YOLOv5</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="PP-YOLOE+" checked><span>PP-YOLOE+</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="DAMO-YOLO" checked><span>DAMO-YOLO</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="YOLOX" checked><span>YOLOX</span></label><br>
+    <label><input type="checkbox" name="algorithm" value="RTDETRv2" checked><span>RTDETRv2</span></label>
+</div> 
+
+  <div style="flex-grow: 1;"><canvas id="chart"></canvas></div> <!-- Canva for plotting benchmarks -->
+</div>
 
 ## Introduction
 
