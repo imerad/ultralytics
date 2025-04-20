@@ -1948,6 +1948,7 @@ class Albumentations:
             T = [
                 #A.Equalize(p=0.3),
                 #A.RandomToneCurve(p=0.5),
+                A.GaussNoise(std_range=(0.05, 0.1), p=0.2,),
                 A.Blur(p=0.01),
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
@@ -1955,9 +1956,9 @@ class Albumentations:
                 #A.RandomSizedBBoxSafeCrop(width=imsize, height=imsize, erosion_rate=0.2),
                 #A.BBoxSafeRandomCrop(erosion_rate=0.8, p=0.65),
                 #A.PadIfNeeded(min_height=imsize, min_width=imsize, p=1, border_mode=cv2.BORDER_CONSTANT, value=0),
-                A.RandomBrightnessContrast(p=0.0),
+                A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1),contrast_limit=(-0.1, 0.1), p=0.1),
                 A.RandomGamma(p=0.0),
-                A.ImageCompression(quality_range=(75, 100), p=0.0),
+                A.ImageCompression(quality_range=(20, 50), p=0.2),
             ]
 
             # Compose transforms
