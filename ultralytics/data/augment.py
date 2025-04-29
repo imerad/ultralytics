@@ -949,8 +949,8 @@ class JitterBoxes:
     def jitter_box(self, box, img_width, img_height):
         xmin, ymin, xmax, ymax = box
         w, h = (xmax-xmin), (ymax-ymin)
-
-        eps = lambda : random.uniform(-max_jitter, max_jitter)
+        
+        eps = lambda : random.uniform(-self.max_jitter_proportion, self.max_jitter_proportion)
         jitter_xmin = max(0, xmin + eps() * w)
         jitter_xmax = min(img_width, xmax + eps() * w)
         jitter_ymin = max(0, ymin + eps() * h)
