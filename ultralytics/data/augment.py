@@ -985,8 +985,8 @@ class JitterBoxes:
 
         labels["instances"] = new_instances # [i]
         labels["cls"] = cls # [i]
-        labels["img"] = cropped_img
-        labels["resized_shape"] = cropped_img.shape[:2]
+        labels["img"] = img
+        labels["resized_shape"] = img.shape[:2]
         return labels
 
 
