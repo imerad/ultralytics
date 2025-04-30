@@ -979,7 +979,7 @@ class JitterBoxes:
                 new_bboxes.append(self.jitter_box(box, W, H))
                 cls_values.append(cls[i])
 
-        new_bboxes = torch.tensor(new_bboxes)
+        new_bboxes = torch.tensor(new_bboxes).reshape((-1, 4))
 
         segments = instances.segments
         keypoints = instances.keypoints
