@@ -929,14 +929,12 @@ class MixUp(BaseMixTransform):
         labels["cls"] = np.concatenate([labels["cls"], labels2["cls"]], 0)
         return labels
 
-
 class Identity:
     def __init__(self):
         pass
 
     def __call__(self, labels):
         return labels
-
 
 
 class JitterBoxes:
@@ -951,10 +949,10 @@ class JitterBoxes:
         w, h = (xmax-xmin), (ymax-ymin)
         
         eps = lambda : random.uniform(-self.max_jitter_proportion, self.max_jitter_proportion)
-        jitter_xmin = max(0, xmin + eps() * w)
-        jitter_xmax = min(img_width, xmax + eps() * w)
-        jitter_ymin = max(0, ymin + eps() * h)
-        jitter_ymax = min(img_height, ymax + eps() * h)
+        jitter_xmin = int(max(0, xmin + eps() * w))
+        jitter_xmax = int(min(img_width, xmax + eps() * w))
+        jitter_ymin = int(max(0, ymin + eps() * h))
+        jitter_ymax = int(min(img_height, ymax + eps() * h))
         
         return [jitter_xmin, jitter_ymin, jitter_xmax, jitter_ymax]
 
@@ -979,7 +977,7 @@ class JitterBoxes:
                 new_bboxes.append(self.jitter_box(box, W, H))
                 cls_values.append(cls[i])
 
-        new_bboxes = torch.tensor(new_bboxes).reshape((-1, 4))
+        new_bboxes = torch.tensor(new_bboxes).int().reshape((-1, 4))
 
         segments = instances.segments
         keypoints = instances.keypoints
@@ -1006,11 +1004,6 @@ class RandomCropPreserveBoxes:
         min_box_x, min_box_y = W, H
         max_box_x, max_box_y = 0, 0
         for k in range(len(bboxes)):
-            # cx, cy, wp, hp = target["boxes"][k]
-            # w, h = int(wp*W), int(hp*H)
-            # xmin, ymin = int(W*(cx-wp/2)), int(H*(cy-hp/2))
-            #print(f"bbox : {xmin}, {ymin}, {w}, {h}")
-            #xyxy_boxes.append([xmin, ymin, xmin+w, ymin+h])
             min_box_x = min(min_box_x, bboxes[k, 0] - self.margin)
             min_box_y = min(min_box_y, bboxes[k, 1] - self.margin)
             max_box_x = max(max_box_x, bboxes[k, 2] + self.margin)
@@ -1041,18 +1034,6 @@ class RandomCropPreserveBoxes:
         bboxes[:, 2] -= crop_xmin
         bboxes[:, 3] -= crop_ymin
 
-        # new_boxes = []
-        # areas = []
-        # for k in range(len(bboxes)):
-        #     xmin, ymin, xmax, ymax = bboxes[k]
-        #     areas.append((xmax-xmin)*(ymax-ymin))
-        #     cx, cy = (xmin+xmax-2*crop_xmin)/(2*cropped_W), (ymin+ymax-2*crop_ymin)/(2*cropped_H)
-        #     wp, hp = (xmax-xmin)/cropped_W, (ymax-ymin)/cropped_H
-        #     new_boxes.append([cx, cy, wp, hp])
-
-        # target["boxes"] = torch.as_tensor(new_boxes)
-        # target["area"] = torch.as_tensor(areas)
-
         return cropped_image, bboxes
 
     def __call__(self, labels):
@@ -1060,17 +1041,10 @@ class RandomCropPreserveBoxes:
         #     labels = self.pre_transform(labels)
 
         img = labels["img"]
-        cls = labels["cls"]
         instances = labels.pop("instances")
         # Make sure the coord formats are right
         instances.convert_bbox(format="xyxy")
         instances.denormalize(*img.shape[:2][::-1])
-
-        # border = labels.pop("mosaic_border", self.border)
-        # self.size = img.shape[1] + border[1] * 2, img.shape[0] + border[0] * 2  # w, h
-        # M is affine matrix
-        # Scale for func:`box_candidates`
-        # img, M, scale = self.affine_transform(img, border)
 
         cropped_img, bboxes = self.crop(img, instances.bboxes)
 
@@ -1093,10 +1067,10 @@ class RandomCropPreserveBoxes:
         #     box1=instances.bboxes.T, box2=new_instances.bboxes.T, area_thr=0.01 if len(segments) else 0.10
         # )
         labels["instances"] = new_instances # [i]
-        labels["cls"] = cls # [i]
         labels["img"] = cropped_img
         labels["resized_shape"] = cropped_img.shape[:2]
         return labels
+
 
 
 class CutMix(BaseMixTransform):
@@ -2031,7 +2005,7 @@ class Albumentations:
         - Spatial transforms are handled differently and require special processing for bounding boxes.
     """
 
-    def __init__(self, p=1.0, imsize=320):
+    def __init__(self, p=1.0):
         """
         Initialize the Albumentations transform object for YOLO bbox formatted parameters.
 
@@ -2120,17 +2094,13 @@ class Albumentations:
 
             # Transforms
             T = [
-                #A.Equalize(p=0.3),
-                #A.RandomToneCurve(p=0.5),
                 A.GaussNoise(std_range=(0.05, 0.1), p=0.2,),
                 A.Blur(p=0.01),
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
-                #A.CLAHE(p=0.01),
-                #A.RandomSizedBBoxSafeCrop(width=imsize, height=imsize, erosion_rate=0.2),
-                #A.BBoxSafeRandomCrop(erosion_rate=0.8, p=0.65),
-                #A.PadIfNeeded(min_height=imsize, min_width=imsize, p=1, border_mode=cv2.BORDER_CONSTANT, value=0),
                 A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1),contrast_limit=(-0.1, 0.1), p=0.1),
+                A.CLAHE(p=0.01),
+                A.RandomBrightnessContrast(p=0.0),
                 A.RandomGamma(p=0.0),
                 A.ImageCompression(quality_range=(20, 50), p=0.2),
             ]
@@ -2717,8 +2687,8 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         [
             pre_transform,
             MixUp(dataset, pre_transform=pre_transform, p=hyp.mixup),
-            #CutMix(dataset, pre_transform=pre_transform, p=hyp.cutmix),
-            Albumentations(p=1.0, imsize=imgsz),
+            CutMix(dataset, pre_transform=pre_transform, p=hyp.cutmix),
+            Albumentations(p=1.0),
             RandomHSV(hgain=hyp.hsv_h, sgain=hyp.hsv_s, vgain=hyp.hsv_v),
             RandomFlip(direction="vertical", p=hyp.flipud),
             RandomFlip(direction="horizontal", p=hyp.fliplr, flip_idx=flip_idx),
