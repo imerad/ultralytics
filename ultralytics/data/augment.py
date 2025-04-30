@@ -962,6 +962,8 @@ class JitterBoxes:
 
         img = labels["img"]
         cls = labels["cls"]
+        print(cls)
+        cls_values = []
         instances = labels.pop("instances")
         # Make sure the coord formats are right
         instances.convert_bbox(format="xyxy")
@@ -971,10 +973,12 @@ class JitterBoxes:
         new_bboxes = []
         for i in range(len(instances.bboxes)):
             box = instances.bboxes[i,:].tolist()
+            cls_values.append(cls[i])
             new_bboxes.append(box) # keep all original boxes
             # add a random number of jittered boxes
             for _ in range(random.randint(0, self.max_n_jittered)):
                 new_bboxes.append(self.jitter_box(box, W, H))
+                cls_values.append(cls[i])
 
         new_bboxes = torch.tensor(new_bboxes)
 
@@ -984,7 +988,7 @@ class JitterBoxes:
         new_instances = Instances(new_bboxes, segments, keypoints, bbox_format="xyxy", normalized=False)
 
         labels["instances"] = new_instances # [i]
-        labels["cls"] = cls # [i]
+        labels["cls"] = np.array(cls_values) # [i]
         labels["img"] = img
         labels["resized_shape"] = img.shape[:2]
         return labels
