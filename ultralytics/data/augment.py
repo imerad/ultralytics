@@ -962,7 +962,6 @@ class JitterBoxes:
 
         img = labels["img"]
         cls = labels["cls"]
-        print(cls)
         cls_values = []
         instances = labels.pop("instances")
         # Make sure the coord formats are right
