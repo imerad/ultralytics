@@ -2099,12 +2099,12 @@ class Albumentations:
 
             # Transforms
             T = [
-                A.GaussNoise(std_range=(0.05, 0.1), p=0.2,),
+                #A.GaussNoise(std_range=(0.05, 0.1), p=0.2,),
                 A.Blur(p=0.01),
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
-                A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1),contrast_limit=(-0.1, 0.1), p=0.1),
-                A.CLAHE(p=0.01),
+                #A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1),contrast_limit=(-0.1, 0.1), p=0.1),
+                #A.CLAHE(p=0.01),
                 A.RandomBrightnessContrast(p=0.0),
                 A.RandomGamma(p=0.0),
                 A.ImageCompression(quality_range=(20, 50), p=0.2),
@@ -2658,8 +2658,8 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
     print(f"stretch={stretch}")
     cropPreserveBoxes = RandomCropPreserveBoxes(p=0.2, min_crop_portion=0.75)
     jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
-    #mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic)#, pre_transform=Compose([jitterBoxes, cropPreserveBoxes]))
-    mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes]))
+    mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes, cropPreserveBoxes]))
+    #mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes]))
     affine = RandomPerspective(
         degrees=hyp.degrees,
         translate=hyp.translate,
