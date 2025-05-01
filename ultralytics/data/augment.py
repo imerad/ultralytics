@@ -948,7 +948,7 @@ class JitterBoxes:
         xmin, ymin, xmax, ymax = box
         w, h = (xmax-xmin), (ymax-ymin)
         
-        eps = lambda : random.uniform(-self.max_jitter_proportion, self.max_jitter_proportion)
+        eps = lambda : self.max_jitter_proportion * random.uniform(-1, 1)
         jitter_xmin = int(max(0, xmin + eps() * w))
         jitter_xmax = int(min(img_width, xmax + eps() * w))
         jitter_ymin = int(max(0, ymin + eps() * h))
@@ -958,7 +958,6 @@ class JitterBoxes:
 
     def __call__(self, labels):
 
-        img = labels["img"]
         cls = labels["cls"]
         cls_values = []
         instances = labels.pop("instances")
@@ -977,17 +976,15 @@ class JitterBoxes:
                 new_bboxes.append(self.jitter_box(box, W, H))
                 cls_values.append(cls[i])
 
-        new_bboxes = torch.tensor(new_bboxes).int().reshape((-1, 4))
+        #new_bboxes = torch.tensor(new_bboxes).int().reshape((-1, 4))
+        new_bboxes = np.array(new_bboxes, dtype=instances.bboxes.dtype).reshape((-1, 4))
 
-        segments = instances.segments
-        keypoints = instances.keypoints
-
-        new_instances = Instances(new_bboxes, segments, keypoints, bbox_format="xyxy", normalized=False)
+        new_instances = Instances(new_bboxes, instances.segments, instances.keypoints, bbox_format="xyxy", normalized=False)
 
         labels["instances"] = new_instances # [i]
-        labels["cls"] = np.array(cls_values).reshape((-1, 1)) # [i]
-        labels["img"] = img
-        labels["resized_shape"] = img.shape[:2]
+        labels["cls"] = np.array(cls_values, dtype=cls.dtype).reshape((-1, 1)) # [i]
+        # labels["img"] = img
+        # labels["resized_shape"] = img.shape[:2]
         return labels
 
 
@@ -2650,9 +2647,11 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> augmented_data = transforms(dataset[0])
     """
     print("running v8_transforms with jitterBoxes and cropPreserveBoxes")
+    print(f"stretch={stretch}")
     cropPreserveBoxes = RandomCropPreserveBoxes(p=0.2, min_crop_portion=0.75)
     jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
-    mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic)#, pre_transform=Compose([jitterBoxes, cropPreserveBoxes]))
+    #mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic)#, pre_transform=Compose([jitterBoxes, cropPreserveBoxes]))
+    mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes]))
     affine = RandomPerspective(
         degrees=hyp.degrees,
         translate=hyp.translate,
@@ -2662,9 +2661,8 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         pre_transform=None if stretch else LetterBox(new_shape=(imgsz, imgsz)),
     )
 
-    #pre_transform = Compose([mosaic, jitterBoxes, cropPreserveBoxes, affine]) if hyp.mosaic==0 else Compose([mosaic,
-    # affine])
-    pre_transform = Compose([mosaic, affine])
+    pre_transform = Compose([mosaic, jitterBoxes, affine]) if hyp.mosaic==0 else Compose([mosaic, affine])
+    #pre_transform = Compose([mosaic, affine])
     if hyp.copy_paste_mode == "flip":
         pre_transform.insert(1, CopyPaste(p=hyp.copy_paste, mode=hyp.copy_paste_mode))
     else:
