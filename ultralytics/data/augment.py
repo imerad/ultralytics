@@ -983,14 +983,13 @@ class JitterBoxes:
                 new_segments.append(instances.segments[i])
                 new_keypoints.append(instances.keypoints[i])
 
-        #new_bboxes = torch.tensor(new_bboxes).int().reshape((-1, 4))
         new_bboxes = np.array(new_bboxes, dtype=instances.bboxes.dtype).reshape((-1, 4))
 
-        new_instances = Instances(new_bboxes, new_segments, np.array(new_keypoints), bbox_format="xyxy",
+        new_instances = Instances(new_bboxes, instances.segments, instances.keypoints, bbox_format="xyxy",
                                                                      normalized=False)
 
-        #labels["instances"] = new_instances # [i]
-        labels["instances"] = Instances.concatenate([labels["instances"], new_instances], axis=0)
+        labels["instances"] = new_instances # [i]
+        #labels["instances"] = Instances.concatenate([labels["instances"], new_instances], axis=0)
         labels["cls"] = np.array(cls_values, dtype=cls.dtype).reshape((-1, 1)) # [i]
         # labels["img"] = img
         # labels["resized_shape"] = img.shape[:2]
