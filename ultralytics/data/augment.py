@@ -1056,7 +1056,7 @@ class RandomCropPreserveBoxes:
 
         # if keypoints is not None:
         #     keypoints = self.apply_keypoints(keypoints, M)
-        new_instances = Instances(bboxes, segments, keypoints, bbox_format="xyxy", normalized=False)
+        new_instances = Instances(bboxes.int(), segments, keypoints, bbox_format="xyxy", normalized=False)
         # Clip
         # new_instances.clip(*self.size)
 
