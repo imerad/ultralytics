@@ -971,11 +971,11 @@ class JitterBoxes:
         H, W, _ = img.shape
         new_bboxes = []
         for i in range(len(instances.bboxes)):
-            box = instances.bboxes[i,:].tolist()
             cls_values.append(cls[i])
-            new_segments.append(instances.segments[i])
-            new_keypoints.append(instances.keypoints[i])
-            new_bboxes.append(box) # keep all original boxes
+
+        for i in range(len(instances.bboxes)):
+            box = instances.bboxes[i,:].tolist()
+            #new_bboxes.append(box) # keep all original boxes
             # add a random number of jittered boxes
             for _ in range(random.randint(0, self.max_n_jittered)):
                 new_bboxes.append(self.jitter_box(box, W, H))
@@ -989,7 +989,8 @@ class JitterBoxes:
         new_instances = Instances(new_bboxes, new_segments, np.array(new_keypoints), bbox_format="xyxy",
                                                                      normalized=False)
 
-        labels["instances"] = new_instances # [i]
+        #labels["instances"] = new_instances # [i]
+        labels["instances"] = Instances.concatenate([labels["instances"], new_instances], axis=0)
         labels["cls"] = np.array(cls_values, dtype=cls.dtype).reshape((-1, 1)) # [i]
         # labels["img"] = img
         # labels["resized_shape"] = img.shape[:2]
