@@ -960,6 +960,7 @@ class JitterBoxes:
 
         cls = labels["cls"]
         cls_values = []
+        img = labels["img"]
         instances = labels.pop("instances")
         # Make sure the coord formats are right
         instances.convert_bbox(format="xyxy")
