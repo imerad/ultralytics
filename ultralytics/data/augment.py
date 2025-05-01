@@ -983,7 +983,7 @@ class JitterBoxes:
         new_instances = Instances(new_bboxes, instances.segments, instances.keypoints, bbox_format="xyxy", normalized=False)
 
         labels["instances"] = new_instances # [i]
-        labels["cls"] = np.array(cls_values, dtype=cls.dtype).reshape((-1, 1)) # [i]
+        labels["cls"] = np.array(cls_values, dtype=cls.dtype).reshape(-1) # [i]
         # labels["img"] = img
         # labels["resized_shape"] = img.shape[:2]
         return labels
