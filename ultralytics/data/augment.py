@@ -2107,7 +2107,8 @@ class Albumentations:
                 #A.CLAHE(p=0.01),
                 A.RandomBrightnessContrast(p=0.0),
                 A.RandomGamma(p=0.0),
-                A.ImageCompression(quality_range=(20, 50), p=0.2),
+                #A.ImageCompression(quality_range=(20, 50), p=0.2),
+                A.ImageCompression(quality_range=(75, 100), p=0.0),
             ]
 
             # Compose transforms
@@ -2658,7 +2659,8 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
     print(f"stretch={stretch}")
     cropPreserveBoxes = RandomCropPreserveBoxes(p=0.2, min_crop_portion=0.75)
     jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
-    mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes, cropPreserveBoxes]))
+    #mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes, cropPreserveBoxes]))
+    mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([cropPreserveBoxes]))
     #mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes]))
     affine = RandomPerspective(
         degrees=hyp.degrees,
@@ -2669,7 +2671,8 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         pre_transform=None if stretch else LetterBox(new_shape=(imgsz, imgsz)),
     )
 
-    pre_transform = Compose([mosaic, jitterBoxes, affine]) if hyp.mosaic==0 else Compose([mosaic, affine])
+    #pre_transform = Compose([mosaic, jitterBoxes, affine]) if hyp.mosaic==0 else Compose([mosaic, affine])
+    pre_transform = Compose([mosaic, cropPreserveBoxes, affine]) if hyp.mosaic==0 else Compose([mosaic, affine])
     #pre_transform = Compose([mosaic, affine])
     if hyp.copy_paste_mode == "flip":
         pre_transform.insert(1, CopyPaste(p=hyp.copy_paste, mode=hyp.copy_paste_mode))
