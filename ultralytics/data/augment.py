@@ -2025,7 +2025,11 @@ class OpticalDistortion:
             if len(new["class_labels"]) > 0:  # skip update if no bbox in new im
                 labels["img"] = new["image"]
                 labels["cls"] = np.array(new["class_labels"])
+                if len(labels["cls"].shape) == 1:
+                    labels["cls"] = np.expand_dims(labels["cls"], 0)
                 bboxes = np.array(new["bboxes"], dtype=np.float32)
+                if len(bboxes.shape) == 1:
+                    bboxes = np.expand_dims(bboxes, 0)
             labels["instances"].update(bboxes=bboxes)
 
         return labels
@@ -2213,22 +2217,23 @@ class Albumentations:
         if im.shape[2] != 3:  # Only apply Albumentation on 3-channel images
             return labels
 
+        print("In Albumentations")
         if self.contains_spatial:
             cls = labels["cls"]
-            print(f"old cls shape {cls.shape}")
+            #print(f"old cls shape {cls.shape}")
             if len(cls):
                 labels["instances"].convert_bbox("xywh")
                 labels["instances"].normalize(*im.shape[:2][::-1])
                 bboxes = labels["instances"].bboxes
-                print(f"old boxes : \n{bboxes}")
+                #print(f"old boxes : \n{bboxes}")
                 # TODO: add supports of segments and keypoints
                 new = self.transform(image=im, bboxes=bboxes, class_labels=cls)  # transformed
                 if len(new["class_labels"]) > 0:  # skip update if no bbox in new im
                     labels["img"] = new["image"]
                     labels["cls"] = np.array(new["class_labels"])
-                    print(f"new cls shape {labels['cls']}")
+                    #print(f"new cls shape {labels['cls']}")
                     bboxes = np.array(new["bboxes"], dtype=np.float32)
-                    print(f"new boxes : \n{bboxes}")
+                    #print(f"new boxes : \n{bboxes}")
                 labels["instances"].update(bboxes=bboxes)
         else:
             labels["img"] = self.transform(image=labels["img"])["image"]  # transformed
