@@ -2019,7 +2019,7 @@ class OpticalDistortion:
         cls = labels["cls"]
         if len(cls):
             labels["instances"].convert_bbox(format="xyxy")
-            labels["instances"].denormalize(*img.shape[:2][::-1])
+            labels["instances"].denormalize(*im.shape[:2][::-1])
 
             #labels["instances"].convert_bbox("xywh")
             #labels["instances"].normalize(*im.shape[:2][::-1])
@@ -2035,7 +2035,7 @@ class OpticalDistortion:
                 bboxes = np.array(new["bboxes"], 
                     #dtype=np.float32
                     ).reshape((-1, 4))
-                
+
                 #if len(bboxes.shape) == 1:
                 #    bboxes = np.expand_dims(bboxes, 0)
 
