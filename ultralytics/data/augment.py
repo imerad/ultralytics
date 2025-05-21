@@ -2017,12 +2017,16 @@ class OpticalDistortion:
             return labels
 
         cls = labels["cls"]
+
         if len(cls):
             labels["instances"].convert_bbox(format="xyxy")
             labels["instances"].denormalize(*im.shape[:2][::-1])
 
             #labels["instances"].convert_bbox("xywh")
             #labels["instances"].normalize(*im.shape[:2][::-1])
+
+            segments = labels["instances"].segments
+            keypoints = labels["instances"].keypoints
 
             bboxes = labels["instances"].bboxes
             # TODO: add supports of segments and keypoints
@@ -2069,8 +2073,9 @@ class OpticalDistortion:
                 bboxes[:, 2] = np.minimum(bboxes[:, 2], xmax-xmin)
                 bboxes[:, 3] = np.minimum(bboxes[:, 3], ymax-ymin)
 
+                labels["instances"] = Instances(bboxes, segments, keypoints, bbox_format="xyxy", normalized=False)
 
-            labels["instances"].update(bboxes=bboxes)
+            #labels["instances"].update(bboxes=bboxes)
 
 
         return labels
