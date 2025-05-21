@@ -2033,7 +2033,7 @@ class OpticalDistortion:
                     bboxes = np.expand_dims(bboxes, 0)
 
 
-                binary_image = (out["image"].sum(axis=2) == 0).astype(int)
+                binary_image = (new["image"].sum(axis=2) == 0).astype(int)
                 xmin, ymin = 0,0
                 xmax, ymax = binary_image.shape[1]-1, binary_image.shape[0]-1
 
