@@ -848,11 +848,7 @@ class Mosaic(BaseMixTransform):
             cls.append(labels["cls"])
             instances.append(labels["instances"])
         # Final labels
-        print()
-        print(f"in mosaic")
-        print(f"printing cls")
-        print(cls)
-        print()
+
         final_labels = {
             "im_file": mosaic_labels[0]["im_file"],
             "ori_shape": mosaic_labels[0]["ori_shape"],
@@ -2008,7 +2004,6 @@ class OpticalDistortion:
             self.transform.set_random_seed(torch.initial_seed())
 
     def __call__(self, labels):
-        print("applying optical distortion")
         if self.transform is None or random.random() > self.p:
             return labels
 
@@ -2034,19 +2029,13 @@ class OpticalDistortion:
             if len(new["class_labels"]) > 0:  # skip update if no bbox in new im
                 labels["img"] = new["image"]
                 #labels["cls"] = np.array(new["class_labels"])
-                #if len(labels["cls"].shape) == 1:
-                #    labels["cls"] = np.expand_dims(labels["cls"], 0)
+
                 bboxes = np.array(new["bboxes"], 
                     #dtype=np.float32
                     ).reshape((-1, 4))
 
-                #if len(bboxes.shape) == 1:
-                #    bboxes = np.expand_dims(bboxes, 0)
-
-
                 binary_image = (new["image"].sum(axis=2) == 0).astype(int)
-                xmin, ymin = 0,0
-                xmax, ymax = binary_image.shape[1]-1, binary_image.shape[0]-1
+                xmin, ymin, xmax, ymax = 0, 0, binary_image.shape[1]-1, binary_image.shape[0]-1
 
                 horizontal_binary_image = binary_image.sum(axis=0)
                 vertical_binary_image = binary_image.sum(axis=1)
@@ -2063,15 +2052,10 @@ class OpticalDistortion:
                 labels["img"] = labels["img"][ymin:ymax, xmin:xmax]
                 labels["resized_shape"] = labels["img"].shape[:2]
 
-                bboxes[:, 0] -= xmin
-                bboxes[:, 1] -= ymin
-                bboxes[:, 2] -= xmin
-                bboxes[:, 3] -= ymin
-                
-                bboxes[:, 0] = np.maximum(bboxes[:, 0], 0)
-                bboxes[:, 1] = np.maximum(bboxes[:, 1], 0)
-                bboxes[:, 2] = np.minimum(bboxes[:, 2], xmax-xmin)
-                bboxes[:, 3] = np.minimum(bboxes[:, 3], ymax-ymin)
+                bboxes[:, 0] = np.maximum(bboxes[:, 0] - xmin, 0)
+                bboxes[:, 1] = np.maximum(bboxes[:, 1] - ymin, 0)
+                bboxes[:, 2] = np.minimum(bboxes[:, 2] - xmin, xmax-xmin)
+                bboxes[:, 3] = np.minimum(bboxes[:, 3] - ymin, ymax-ymin)
 
                 labels["instances"] = Instances(bboxes, segments, keypoints, bbox_format="xyxy", normalized=False)
 
@@ -2263,7 +2247,6 @@ class Albumentations:
         if im.shape[2] != 3:  # Only apply Albumentation on 3-channel images
             return labels
 
-        print("In Albumentations")
         if self.contains_spatial:
             cls = labels["cls"]
             #print(f"old cls shape {cls.shape}")
@@ -2758,10 +2741,10 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
         >>> transforms = v8_transforms(dataset, imgsz=640, hyp=hyp)
         >>> augmented_data = transforms(dataset[0])
     """
-    print("running v8_transforms with jitterBoxes and cropPreserveBoxes")
+    print("running v8_transforms with cropPreserveBoxes and optical distortion")
     print(f"stretch={stretch}")
     cropPreserveBoxes = RandomCropPreserveBoxes(p=0.2, min_crop_portion=0.75)
-    opticalDistortion = OpticalDistortion(p=1.0)
+    opticalDistortion = OpticalDistortion(p=0.15)
     jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
     custom_augmentations = [cropPreserveBoxes, opticalDistortion]
     
