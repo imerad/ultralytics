@@ -2050,6 +2050,7 @@ class OpticalDistortion:
                     ymax -= 1
 
                 labels["img"] = labels["img"][ymin:ymax, xmin:xmax]
+                labels["resized_shape"] = labels["resized_shape"].shape[:2]
 
                 bboxes[:, 0] -= xmin
                 bboxes[:, 1] -= ymin
