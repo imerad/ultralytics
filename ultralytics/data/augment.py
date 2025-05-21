@@ -1991,7 +1991,7 @@ class CopyPaste(BaseMixTransform):
 
 class OpticalDistortion:
 
-    def __init__(self, p=0.15, mode="fisheye", distort_limit=[0.5, 0.9]):
+    def __init__(self, p=0.15, mode="fisheye", distort_limit=[1.5, 1.9]):
         import albumentations as A
 
         print("initializing optical distortion data aug")
@@ -2008,6 +2008,7 @@ class OpticalDistortion:
             self.transform.set_random_seed(torch.initial_seed())
 
     def __call__(self, labels):
+        print("applying optical distortion")
         if self.transform is None or random.random() > self.p:
             return labels
 
@@ -2154,7 +2155,7 @@ class Albumentations:
                 A.Blur(p=0.01),
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
-                A.OpticalDistortion(distort_limit=[0.5, 0.9], mode="fisheye", p=0.15),
+                #A.OpticalDistortion(distort_limit=[0.5, 0.9], mode="fisheye", p=0.15),
                 #A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1),contrast_limit=(-0.1, 0.1), p=0.1),
                 #A.CLAHE(p=0.01),
                 A.RandomBrightnessContrast(p=0.0),
