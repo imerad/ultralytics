@@ -2058,8 +2058,8 @@ class OpticalDistortion:
                 
                 out["bboxes"][:, 0] = np.maximum(out["bboxes"][:, 0], 0)
                 out["bboxes"][:, 1] = np.maximum(out["bboxes"][:, 1], 0)
-                out["bboxes"][:, 2] = np.minimum(out["bboxes"][:, 2], xmin:xmax)
-                out["bboxes"][:, 3] = np.minimum(out["bboxes"][:, 3], ymin:ymax)
+                out["bboxes"][:, 2] = np.minimum(out["bboxes"][:, 2], xmax-xmin)
+                out["bboxes"][:, 3] = np.minimum(out["bboxes"][:, 3], ymax-ymin)
 
 
             labels["instances"].update(bboxes=bboxes)
