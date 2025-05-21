@@ -848,6 +848,11 @@ class Mosaic(BaseMixTransform):
             cls.append(labels["cls"])
             instances.append(labels["instances"])
         # Final labels
+        print()
+        print(f"in mosaic")
+        print(f"printing cls")
+        print(cls)
+        print()
         final_labels = {
             "im_file": mosaic_labels[0]["im_file"],
             "ori_shape": mosaic_labels[0]["ori_shape"],
