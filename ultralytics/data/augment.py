@@ -2025,9 +2025,9 @@ class OpticalDistortion:
             new = self.transform(image=im, bboxes=np.array(bboxes).reshape((-1, 4)), class_labels=cls)  # transformed
             if len(new["class_labels"]) > 0:  # skip update if no bbox in new im
                 labels["img"] = new["image"]
-                labels["cls"] = np.array(new["class_labels"])
-                if len(labels["cls"].shape) == 1:
-                    labels["cls"] = np.expand_dims(labels["cls"], 0)
+                #labels["cls"] = np.array(new["class_labels"])
+                #if len(labels["cls"].shape) == 1:
+                #    labels["cls"] = np.expand_dims(labels["cls"], 0)
                 bboxes = np.array(new["bboxes"], dtype=np.float32)
                 if len(bboxes.shape) == 1:
                     bboxes = np.expand_dims(bboxes, 0)
