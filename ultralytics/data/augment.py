@@ -2001,7 +2001,7 @@ class OpticalDistortion:
         self.distort_limit = distort_limit
         
         self.transform = A.Compose([A.OpticalDistortion(distort_limit=distort_limit, mode=mode, p=1.0)], 
-                bbox_params=A.BboxParams(format="yolo", label_fields=["class_labels"]))
+                bbox_params=A.BboxParams(format="pascal_voc", label_fields=["class_labels"]))
 
         if hasattr(self.transform, "set_random_seed"):
             # Required for deterministic transforms in albumentations>=1.4.21
@@ -2018,8 +2018,12 @@ class OpticalDistortion:
 
         cls = labels["cls"]
         if len(cls):
-            labels["instances"].convert_bbox("xywh")
-            labels["instances"].normalize(*im.shape[:2][::-1])
+            labels["instances"].convert_bbox(format="xyxy")
+            labels["instances"].denormalize(*img.shape[:2][::-1])
+
+            #labels["instances"].convert_bbox("xywh")
+            #labels["instances"].normalize(*im.shape[:2][::-1])
+
             bboxes = labels["instances"].bboxes
             # TODO: add supports of segments and keypoints
             new = self.transform(image=im, bboxes=np.array(bboxes).reshape((-1, 4)), class_labels=cls)  # transformed
@@ -2028,9 +2032,12 @@ class OpticalDistortion:
                 #labels["cls"] = np.array(new["class_labels"])
                 #if len(labels["cls"].shape) == 1:
                 #    labels["cls"] = np.expand_dims(labels["cls"], 0)
-                bboxes = np.array(new["bboxes"], dtype=np.float32)
-                if len(bboxes.shape) == 1:
-                    bboxes = np.expand_dims(bboxes, 0)
+                bboxes = np.array(new["bboxes"], 
+                    #dtype=np.float32
+                    ).reshape((-1, 4))
+                
+                #if len(bboxes.shape) == 1:
+                #    bboxes = np.expand_dims(bboxes, 0)
 
 
                 binary_image = (new["image"].sum(axis=2) == 0).astype(int)
