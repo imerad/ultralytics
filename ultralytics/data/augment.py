@@ -1984,6 +1984,48 @@ class CopyPaste(BaseMixTransform):
         return labels1
 
 
+class OpticalDistortion:
+
+    def __init__(self, p=0.15, mode="fisheye", distort_limit=[0.5, 0.9]):
+        import albumentations as A
+
+        print("initializing optical distortion data aug")
+
+        self.p = p
+        self.mode = mode
+        self.distort_limit = distort_limit
+        
+        self.transform = A.Compose([A.OpticalDistortion(distort_limit=distort_limit, mode=mode, p=p)], 
+                bbox_params=A.BboxParams(format="yolo", label_fields=["class_labels"]))
+
+        if hasattr(self.transform, "set_random_seed"):
+            # Required for deterministic transforms in albumentations>=1.4.21
+            self.transform.set_random_seed(torch.initial_seed())
+
+    def __call__(self, labels):
+        if self.transform is None or random.random() > self.p:
+            return labels
+
+        im = labels["img"]
+        if im.shape[2] != 3:  # Only apply Albumentation on 3-channel images
+            return labels
+
+        cls = labels["cls"]
+        if len(cls):
+            labels["instances"].convert_bbox("xywh")
+            labels["instances"].normalize(*im.shape[:2][::-1])
+            bboxes = labels["instances"].bboxes
+            # TODO: add supports of segments and keypoints
+            new = self.transform(image=im, bboxes=bboxes, class_labels=cls)  # transformed
+            if len(new["class_labels"]) > 0:  # skip update if no bbox in new im
+                labels["img"] = new["image"]
+                labels["cls"] = np.array(new["class_labels"])
+                bboxes = np.array(new["bboxes"], dtype=np.float32)
+            labels["instances"].update(bboxes=bboxes)
+
+        return labels
+
+
 class Albumentations:
     """
     Albumentations transformations for image augmentation.
@@ -2103,6 +2145,7 @@ class Albumentations:
                 A.Blur(p=0.01),
                 A.MedianBlur(p=0.01),
                 A.ToGray(p=0.01),
+                A.OpticalDistortion(distort_limit=[0.5, 0.9], mode="fisheye", p=0.15),
                 #A.RandomBrightnessContrast(brightness_limit=(-0.1, 0.1),contrast_limit=(-0.1, 0.1), p=0.1),
                 #A.CLAHE(p=0.01),
                 A.RandomBrightnessContrast(p=0.0),
@@ -2658,10 +2701,12 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
     print("running v8_transforms with jitterBoxes and cropPreserveBoxes")
     print(f"stretch={stretch}")
     cropPreserveBoxes = RandomCropPreserveBoxes(p=0.2, min_crop_portion=0.75)
+    opticalDistortion = OpticalDistortion(p=1.0)
     jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
-    #mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes, cropPreserveBoxes]))
-    mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([cropPreserveBoxes]))
-    #mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose([jitterBoxes]))
+    custom_augmentations = [cropPreserveBoxes, opticalDistortion]
+    
+    mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose(custom_augmentations))
+    
     affine = RandomPerspective(
         degrees=hyp.degrees,
         translate=hyp.translate,
@@ -2672,7 +2717,8 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
     )
 
     #pre_transform = Compose([mosaic, jitterBoxes, affine]) if hyp.mosaic==0 else Compose([mosaic, affine])
-    pre_transform = Compose([mosaic, cropPreserveBoxes, affine]) if hyp.mosaic==0 else Compose([mosaic, affine])
+    #pre_transform = Compose([mosaic] + custom_augmentations + [affine]) if hyp.mosaic==0 else Compose([mosaic, affine])
+    pre_transform = Compose([mosaic] + (custom_augmentations if hyp.mosaic==0 else []) + [affine])
     #pre_transform = Compose([mosaic, affine])
     if hyp.copy_paste_mode == "flip":
         pre_transform.insert(1, CopyPaste(p=hyp.copy_paste, mode=hyp.copy_paste_mode))
