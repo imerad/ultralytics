@@ -2000,7 +2000,7 @@ class OpticalDistortion:
         self.mode = mode
         self.distort_limit = distort_limit
         
-        self.transform = A.Compose([A.OpticalDistortion(distort_limit=distort_limit, mode=mode, p=p)], 
+        self.transform = A.Compose([A.OpticalDistortion(distort_limit=distort_limit, mode=mode, p=1.0)], 
                 bbox_params=A.BboxParams(format="yolo", label_fields=["class_labels"]))
 
         if hasattr(self.transform, "set_random_seed"):
@@ -2022,7 +2022,7 @@ class OpticalDistortion:
             labels["instances"].normalize(*im.shape[:2][::-1])
             bboxes = labels["instances"].bboxes
             # TODO: add supports of segments and keypoints
-            new = self.transform(image=im, bboxes=bboxes, class_labels=cls)  # transformed
+            new = self.transform(image=im, bboxes=np.array(bboxes).reshape((-1, 4)), class_labels=cls)  # transformed
             if len(new["class_labels"]) > 0:  # skip update if no bbox in new im
                 labels["img"] = new["image"]
                 labels["cls"] = np.array(new["class_labels"])
@@ -2031,7 +2031,39 @@ class OpticalDistortion:
                 bboxes = np.array(new["bboxes"], dtype=np.float32)
                 if len(bboxes.shape) == 1:
                     bboxes = np.expand_dims(bboxes, 0)
+
+
+                binary_image = (out["image"].sum(axis=2) == 0).astype(int)
+                xmin, ymin = 0,0
+                xmax, ymax = binary_image.shape[1]-1, binary_image.shape[0]-1
+
+                horizontal_binary_image = binary_image.sum(axis=0)
+                vertical_binary_image = binary_image.sum(axis=1)
+
+                while horizontal_binary_image[xmin] == binary_image.shape[0]:
+                    xmin += 1
+                while horizontal_binary_image[xmax] == binary_image.shape[0]:
+                    xmax -= 1
+                while vertical_binary_image[ymin] == binary_image.shape[1]:
+                    ymin += 1
+                while vertical_binary_image[ymax] == binary_image.shape[1]:
+                    ymax -= 1
+
+                labels["img"] = labels["img"][ymin:ymax, xmin:xmax]
+
+                out["bboxes"][:, 0] -= xmin
+                out["bboxes"][:, 1] -= ymin
+                out["bboxes"][:, 2] -= xmin
+                out["bboxes"][:, 3] -= ymin
+                
+                out["bboxes"][:, 0] = np.maximum(out["bboxes"][:, 0], 0)
+                out["bboxes"][:, 1] = np.maximum(out["bboxes"][:, 1], 0)
+                out["bboxes"][:, 2] = np.minimum(out["bboxes"][:, 2], xmin:xmax)
+                out["bboxes"][:, 3] = np.minimum(out["bboxes"][:, 3], ymin:ymax)
+
+
             labels["instances"].update(bboxes=bboxes)
+
 
         return labels
 
