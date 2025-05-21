@@ -2746,7 +2746,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
     cropPreserveBoxes = RandomCropPreserveBoxes(p=0.2, min_crop_portion=0.75)
     opticalDistortion = OpticalDistortion(p=0.15)
     jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
-    custom_augmentations = [cropPreserveBoxes, opticalDistortion]
+    custom_augmentations = [cropPreserveBoxes] #, opticalDistortion]
     
     mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose(custom_augmentations))
     
