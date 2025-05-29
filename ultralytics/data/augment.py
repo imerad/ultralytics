@@ -998,11 +998,12 @@ class JitterBoxes:
 
 
 class RandomCropPreserveBoxes:
-    def __init__(self, p=0.25, min_crop_portion=0.7, margin=20):
+    def __init__(self, p=0.25, min_crop_portion=0.5, margin=20, min_imgsz=1024):
         #print("initializing RandomCropPreserveBoxes")
         self.p = p # cropping probability
         self.min_crop_portion = min_crop_portion
         self.margin = margin
+        self.min_imgsz = min_imgsz
 
     def crop(self, image, bboxes):
         H, W, _ = image.shape
@@ -1015,7 +1016,9 @@ class RandomCropPreserveBoxes:
             max_box_x = max(max_box_x, bboxes[k, 2] + self.margin)
             max_box_y = max(max_box_y, bboxes[k, 3] + self.margin)
 
-        cropped_H, cropped_W = random.randint(int(self.min_crop_portion * H), H), random.randint(int(self.min_crop_portion * W), W)
+        cropped_H = max(self.min_imgsz, random.randint(int(self.min_crop_portion * H), H))
+        cropped_W = max(self.min_imgsz, random.randint(int(self.min_crop_portion * W), W))
+
         cropped_H = int(min(max(cropped_H, max_box_y - min_box_y + 2 * self.margin), H))
         cropped_W = int(min(max(cropped_W, max_box_x - min_box_x + 2 * self.margin), W))
 
@@ -2743,9 +2746,9 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
     """
     print("running v8_transforms with cropPreserveBoxes and optical distortion")
     print(f"stretch={stretch}")
-    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.2, min_crop_portion=0.75)
-    opticalDistortion = OpticalDistortion(p=0.15)
-    jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
+    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.33, min_crop_portion=0.5, min_imgsz=int(0.7*imgsz))
+    # opticalDistortion = OpticalDistortion(p=0.15)
+    # jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
     custom_augmentations = [cropPreserveBoxes] #, opticalDistortion]
     
     mosaic = Mosaic(dataset, imgsz=imgsz, p=hyp.mosaic, pre_transform=Compose(custom_augmentations))
