@@ -2746,7 +2746,7 @@ def v8_transforms(dataset, imgsz, hyp, stretch=False):
     """
     print("running v8_transforms with cropPreserveBoxes and optical distortion")
     print(f"stretch={stretch}")
-    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.33, min_crop_portion=0.5, min_imgsz=int(0.7*imgsz))
+    cropPreserveBoxes = RandomCropPreserveBoxes(p=0.4, min_crop_portion=0.5, min_imgsz=int(0.5*imgsz))
     # opticalDistortion = OpticalDistortion(p=0.15)
     # jitterBoxes = JitterBoxes(p=0.5, max_jitter_proportion=0.1, max_n_jittered=3)
     custom_augmentations = [cropPreserveBoxes] #, opticalDistortion]
